@@ -43,6 +43,13 @@ public class AddressIndexedSignerProvider {
   public static AddressIndexedSignerProvider create(final SignerProvider signerProvider) {
     final Map<String, ECPublicKey> addrToPubKeyMap = new HashMap<>();
 
+    addKeysToAddrToPubKeyMap(signerProvider, addrToPubKeyMap);
+
+    return new AddressIndexedSignerProvider(signerProvider, addrToPubKeyMap);
+  }
+
+  private static void addKeysToAddrToPubKeyMap(
+      SignerProvider signerProvider, Map<String, ECPublicKey> addrToPubKeyMap) {
     signerProvider
         .availablePublicKeys()
         .forEach(
@@ -54,13 +61,15 @@ public class AddressIndexedSignerProvider {
                           .toLowerCase();
               addrToPubKeyMap.put(address, pubKey);
             });
-
-    return new AddressIndexedSignerProvider(signerProvider, addrToPubKeyMap);
   }
 
   /* Gets a signer from its address, NOTE address MUST have 0x hex prefix */
   public Optional<Signer> getSigner(final String address) {
-    final ECPublicKey publicKey = addressToPublicKeyMap.get(address.toLowerCase());
+    ECPublicKey publicKey = addressToPublicKeyMap.get(address.toLowerCase());
+    if (publicKey == null) {
+      addKeysToAddrToPubKeyMap(signerProvider, this.addressToPublicKeyMap);
+      publicKey = addressToPublicKeyMap.get(address.toLowerCase());
+    }
     if (publicKey == null) {
       return Optional.empty();
     }
